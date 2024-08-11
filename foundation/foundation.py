@@ -27,18 +27,25 @@ class Foundation:
     def getEnvironment(self):
         if not self.environment:
             response = self.client.get(f"{self.url}/v1/environment")
-            self.environment = response.json()
+            if response.status_code == 200:
+                self.environment = response.json()
+            else:
+                raise Exception(response.json())
             
         return self.environment
 
     def getConfiguration(self):
         if not self.config:
             response = self.client.get(f"{self.url}/v1/configuration")
-            result = response.json()
-            if response.headers.get('Content-Type') == 'application/json':
-                self.config = json.loads(result['content'])
+            if response.status_code == 200:
+                result = response.json()
+                if response.headers.get('Content-Type') == 'application/json':
+                    self.config = json.loads(result['content'])
+                else:
+                    self.config = result['content']
             else:
-                self.config = result['content']
+                raise Exception(response.json())
+            
 
         return self.config
 
@@ -50,8 +57,10 @@ class Foundation:
         if response.status_code == 200:
             self.variables[name] = response.json()
             return self.variables[name]['value']
-
-        return fallback
+        elif response.status_code == 404:
+            return fallback
+        else:
+            raise Exception(response.json())
 
     def subscribe(self, cb: Callable[[Optional[str], any], None]):
         self.callback = cb
